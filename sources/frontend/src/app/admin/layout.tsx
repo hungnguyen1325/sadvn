@@ -3,6 +3,7 @@
 import React, { useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../../services/authService";
+import { AdminHeader } from "./components/AdminHeader";
 
 const emptySubscribe = () => () => {};
 
@@ -47,32 +48,11 @@ export default function AdminLayout({
     );
   }
 
-  const handleLogout = () => {
-    authService.logout();
-    router.push("/");
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Top Header constrained to max-w-7xl mx-auto */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-5 md:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <span className="text-xl font-black tracking-widest text-slate-950">SADVN</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-xs text-slate-500 font-medium">
-              Xin chào, <span className="font-bold text-slate-900">{username}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-1.5 text-xs font-bold rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-all cursor-pointer shadow-sm"
-            >
-              Đăng xuất
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Top Header with redesigned tabs and navigation */}
+      <AdminHeader username={username} />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto p-5 md:p-8 space-y-6">

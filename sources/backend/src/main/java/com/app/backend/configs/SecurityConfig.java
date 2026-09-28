@@ -54,7 +54,8 @@ public class SecurityConfig {
                         "/api/v1/business",
                         "/api/v1/business/search",
                         "/api/v1/business/update",
-                        "/api/v1/business/delete/*"
+                        "/api/v1/business/delete/*",
+                        "/api/v1/customer/**"
                     ).authenticated()
                     .requestMatchers(
                         "/api/v1/business/*"

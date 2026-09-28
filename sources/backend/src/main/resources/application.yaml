@@ -32,3 +32,14 @@ jwt:
   expiration: ${JKT_EXPIRATION}
   issuer: ${JWT_ISSUER}
   secret: ${JWT_SECRET}
+
+customer-dbs:
+  host: ${CUSTOMER_DB_HOST}
+  port: ${CUSTOMER_DB_PORT:1433}
+  username: ${CUSTOMER_DB_USER}
+  password: ${CUSTOMER_DB_PASSWORD}
+  encrypt: ${CUSTOMER_DB_ENCRYPT:false}
+  db1-name: ${CUSTOMER_DB1_NAME:BangGiaVang}
+  db2-name: ${CUSTOMER_DB2_NAME:SADVietNam}
+  db3-name: ${CUSTOMER_DB3_NAME:}
+

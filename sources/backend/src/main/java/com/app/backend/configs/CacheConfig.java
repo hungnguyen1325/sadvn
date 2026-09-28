@@ -21,12 +21,12 @@ public class CacheConfig {
      */
     @Bean
     public CacheManager cacheManager() {
-        CaffeineCacheManager manager = new CaffeineCacheManager("businesses");
+        CaffeineCacheManager manager = new CaffeineCacheManager("businesses", "customer-search", "customer-stats");
         manager.setCaffeine(
                 Caffeine.newBuilder()
-                        .maximumSize(500)
-                        .expireAfterWrite(10, TimeUnit.MINUTES)
-                        .recordStats() // bật stats để theo dõi hit/miss nếu cần
+                        .maximumSize(1000)
+                        .expireAfterWrite(5, TimeUnit.MINUTES)
+                        .recordStats()
         );
         return manager;
     }
