@@ -1,0 +1,15 @@
+# Hỗ trợ iOS từ 12 trở lên (iPhone 7 chạy iOS 12, iPhone X chạy iOS 11-16)
+# Next.js SWC compiler sẽ dựa vào file này để transpile JS/CSS đúng target
+
+[production]
+iOS >= 12
+Safari >= 12
+Chrome >= 80
+Firefox >= 78
+Edge >= 80
+
+[development]
+last 2 Chrome versions
+last 2 Firefox versions
+last 2 Safari versions
+last 2 iOS versions
