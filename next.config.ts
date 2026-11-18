@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Chỉ bật standalone khi chạy build cho Docker/VPS tự host
+  ...(process.env.BUILD_STANDALONE === "true" ? { output: "standalone" } : {}),
 };
 
 export default nextConfig;
