@@ -1,195 +1,129 @@
 # SADVN — Hệ thống tra cứu sản phẩm vàng bạc đá quý
 
-**SADVN** (`sadvn.vn`) là hệ thống web tra cứu thông tin sản phẩm vàng bạc đá quý dành cho các doanh nghiệp kinh doanh vàng tại Việt Nam. Hệ thống cho phép người dùng cuối tra cứu chi tiết sản phẩm (tên, mã sản phẩm, hàm lượng vàng, trọng lượng tổng, trọng lượng đá, trọng lượng vàng thực…) thông qua đường dẫn URL chứa các thông số sản phẩm, đồng thời cung cấp trang quản trị (Admin) để quản lý danh sách doanh nghiệp.
+**SADVN** (`sadvn.vn`) là hệ thống web tra cứu thông tin sản phẩm vàng bạc đá quý và quản trị đối tác, doanh nghiệp kinh doanh vàng tại Việt Nam.
+
+Hệ thống được phát triển dưới dạng kiến trúc Fullstack hoàn chỉnh trên **Next.js 16 (App Router)** kết nối trực tiếp với **Microsoft SQL Server** thông qua các **Server Actions** bảo mật cao, loại bỏ tầng API trung gian riêng biệt nhằm tối ưu hiệu năng và bảo mật.
 
 ---
 
-## Tổng quan kiến trúc
+## Kiến trúc hệ thống
 
 ```
 sadvn/
-├── sources/
-│   ├── frontend/          # Next.js 16 (React 19, TypeScript, TailwindCSS 4)
-│   └── backend/           # Spring Boot 4.1 (Java 25, Gradle, SQL Server)
-├── release/
-│   ├── frontend/          # Bản build standalone Next.js (production)
-│   └── backend/           # File JAR đóng gói + script chạy
-├── .gitignore             # Gitignore toàn bộ project
+├── database/
+│   └── schema.sql             # Kịch bản khởi tạo bảng (accounts, business)
+├── public/                    # Tài nguyên tĩnh (ảnh, icon)
+├── src/
+│   ├── actions/               # Server Actions kết nối trực tiếp SQL Server
+│   │   ├── authActions.ts     # Xác thực tài khoản với BCrypt & JWT
+│   │   ├── businessActions.ts # Nghiệp vụ CRUD Doanh nghiệp (sadvn.vn)
+│   │   └── customerActions.ts # Tra cứu liên CSDL (BangGiaVang, SADVietNam)
+│   ├── app/                   # App Router (Next.js 16, React 19)
+│   │   ├── layout.tsx         # Root layout
+│   │   ├── page.tsx           # Trang đăng nhập
+│   │   ├── admin/             # Quản trị Doanh nghiệp & Khách hàng
+│   │   └── [business_code]/   # Tra cứu thông tin sản phẩm công khai
+│   ├── components/            # Giao diện UI tái sử dụng
+│   ├── lib/
+│   │   └── db.ts              # Quản lý Connection Pool kết nối MS SQL Server
+│   └── services/              # Client services gọi Server Actions
+├── .env.example               # Mẫu cấu hình môi trường an toàn (không chứa mật khẩu)
+├── .gitignore                 # Bảo vệ không commit file .env hay secret lên git
+├── package.json
 └── README.md
 ```
 
-| Thành phần | Công nghệ | Port mặc định |
+| Thành phần | Công nghệ | Ghi chú |
 |---|---|---|
-| **Frontend** | Next.js 16, React 19, TypeScript, TailwindCSS 4 | `3000` |
-| **Backend** | Spring Boot 4.1, Java 25, Gradle, Flyway | `8386` |
-| **Database** | Microsoft SQL Server | `1433` |
-| **Auth** | JWT (jjwt 0.12.6) + Spring Security | — |
+| **Fullstack Framework** | Next.js 16 (Turbopack, React 19) | Chạy trên Node.js 20+ |
+| **Giao diện & Styling** | TailwindCSS 4, Lucide Icons | Tối ưu trải nghiệm Responsive |
+| **Cơ sở dữ liệu** | Microsoft SQL Server (1433) | Kết nối pool qua thư viện `mssql` |
+| **Xác thực & Bảo mật** | BCrypt + HMAC-SHA256 JWT | 100% Parameterized Queries chống SQL Injection |
 
 ---
 
 ## Tính năng chính
 
-### 🔍 Tra cứu sản phẩm (Public)
-- Người dùng truy cập URL dạng `/{business_code}/{product_name}/{gold_purity}/{total_weight}/{stone_weight}/{product_code}` để xem chi tiết sản phẩm
-- Hiển thị: tên sản phẩm, mã sản phẩm, hàm lượng vàng, trọng lượng tổng (chỉ/gram), trọng lượng đá, **trọng lượng vàng thực** (tổng − đá)
-- Tự động tra cứu thông tin doanh nghiệp (tên, mã số thuế, địa chỉ) từ API backend
+### 1. 🔍 Tra cứu sản phẩm (Public)
+- Tra cứu theo URL định dạng:
+  `/{business_code}/{product_name}/{gold_purity}/{total_weight}/{stone_weight}/{product_code}`
+- Tự động bóc tách và tính toán: hàm lượng vàng, trọng lượng tổng, trọng lượng đá, **trọng lượng vàng thực**.
+- Truy vấn thông tin doanh nghiệp (tên, MST, địa chỉ) trực tiếp từ database.
 
-### 🔐 Đăng nhập (Authentication)
-- Trang đăng nhập hệ thống với JWT token
-- Token hết hạn (401) tự động redirect về trang đăng nhập
+### 2. 🏢 Quản trị doanh nghiệp (Admin)
+- Quản lý danh sách doanh nghiệp kinh doanh vàng (`sadvn.vn`).
+- Tìm kiếm linh hoạt theo Tên, Mã số thuế, Địa chỉ.
+- Thêm mới, cập nhật và xóa doanh nghiệp với kiểm soát trạng thái (Active/Inactive).
 
-### 🏢 Quản trị doanh nghiệp (Admin)
-- Xem danh sách doanh nghiệp
-- Tìm kiếm doanh nghiệp theo tên, mã số thuế
-- Thêm / Sửa / Xóa doanh nghiệp (CRUD)
-- Quản lý trạng thái hoạt động (active/inactive)
+### 3. 👥 Tra cứu đa nguồn khách hàng (Multi-DB Customer Search)
+- Kết nối đồng thời và đồng bộ dữ liệu từ:
+  - CSDL `BangGiaVang` (Bảng `ShopsTbl`, `AccountsTbl`).
+  - CSDL `SADVietNam` (Bảng `dmdoitac`).
+- Tra cứu nhanh tên tiệm, chủ tiệm, số điện thoại, tài khoản theo từ khóa với phân trang tối ưu.
+
+### 4. 🛡️ Tiêu chuẩn bảo mật (Security Standards)
+- **Chống SQL Injection**: Toàn bộ câu lệnh SQL trong `src/actions/` sử dụng `request.input(...)` với kiểu dữ liệu định danh (`sql.Int`, `sql.NVarChar`, `sql.VarChar`, `sql.Bit`), tuyệt đối không dùng phép nối chuỗi.
+- **Không lưu trữ Secret trong mã nguồn**: Tất cả địa chỉ máy chủ, cổng, tên đăng nhập, mật khẩu cơ sở dữ liệu và khóa bí mật JWT được đọc hoàn toàn từ biến môi trường (`process.env`).
+- **Git Protection**: Tệp `.env` và các biến thể môi trường cục bộ được đưa vào `.gitignore` để ngăn ngừa rò rỉ thông tin nhạy cảm.
 
 ---
 
-## Cài đặt & Chạy
+## Hướng dẫn cài đặt & Chạy
 
-### Yêu cầu hệ thống
+### Yêu cầu tiên quyết
+- **Node.js**: Phiên bản 20.x trở lên.
+- **Microsoft SQL Server**: Có quyền truy cập các cơ sở dữ liệu tương ứng.
 
-- **Java** 25+
-- **Node.js** 20+
-- **SQL Server** (bất kỳ phiên bản hỗ trợ JDBC)
-- **Gradle** (đi kèm wrapper trong project)
-
-### 1. Backend
-
+### 1. Thiết lập biến môi trường
+Sao chép tệp cấu hình mẫu và điền thông tin kết nối thực tế:
 ```bash
-cd sources/backend
-
-# Tạo file .env từ template
 cp .env.example .env
-
-# Chỉnh sửa .env với thông tin database & JWT thực tế
-# DATABASE_HOST, DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD, JWT_SECRET...
-
-# Chạy development
-./gradlew bootRun
 ```
 
-Backend sẽ khởi chạy tại `http://localhost:8386`. Flyway sẽ tự động tạo schema database lần đầu tiên.
+Mở tệp `.env` và khai báo cấu hình của bạn:
+```env
+# Database chính (sadvn.vn)
+DATABASE_HOST=127.0.0.1
+DATABASE_PORT=1433
+DATABASE_NAME=sadvn.vn
+DATABASE_USER=sa
+DATABASE_PASSWORD=your_secure_password
+DATABASE_ENCRYPT=false
 
-### 2. Frontend
+# Database khách hàng (BangGiaVang, SADVietNam)
+CUSTOMER_DB_HOST=127.0.0.1
+CUSTOMER_DB_PORT=1433
+CUSTOMER_DB_USER=sa
+CUSTOMER_DB_PASSWORD=your_secure_password
+CUSTOMER_DB_ENCRYPT=false
+CUSTOMER_DB1_NAME=BangGiaVang
+CUSTOMER_DB2_NAME=SADVietNam
 
+# Khóa ký JWT
+JWT_SECRET=your_jwt_secret_signing_key_here
+```
+
+### 2. Cài đặt thư viện phụ thuộc
 ```bash
-cd sources/frontend
-
-# Cài đặt dependencies
 npm install
+```
 
-# Tạo file .env từ template
-cp .env.example .env
+### 3. Khởi tạo cấu trúc Database (nếu là cơ sở dữ liệu mới)
+Chạy tệp `database/schema.sql` trong SQL Server Management Studio (SSMS) hoặc Azure Data Studio để khởi tạo bảng `accounts` và `business`.
 
-# Chỉnh sửa .env — đặt API_URL trỏ đến backend
-# API_URL=http://localhost:8386
-
-# Chạy development
+### 4. Chạy chế độ phát triển (Development)
+```bash
 npm run dev
 ```
+Hệ thống sẽ chạy tại địa chỉ: `http://localhost:3000`.
 
-Frontend sẽ khởi chạy tại `http://localhost:3000`.
-
-### 3. Production (Release)
-
-Thư mục `release/` chứa bản build sẵn dùng cho production:
-
+### 5. Đóng gói và chạy Production
 ```bash
-# Backend — chạy JAR trực tiếp
-cd release/backend
-cp .env.example .env   # Cấu hình .env
-run.cmd                # Windows
-
-# Frontend — chạy standalone Next.js server
-cd release/frontend
-cp .env.example .env   # Cấu hình .env
-node server.js
+npm run build
+npm run start
 ```
 
 ---
 
-## Cấu trúc Database
-
-Hệ thống sử dụng **Flyway** để quản lý migration. Schema ban đầu gồm 2 bảng:
-
-| Bảng | Mô tả |
-|---|---|
-| `accounts` | Tài khoản đăng nhập hệ thống (username, password hash) |
-| `business` | Doanh nghiệp kinh doanh vàng (tên, MST, địa chỉ, trạng thái) |
-
----
-
-## Biến môi trường
-
-### Backend (`sources/backend/.env`)
-
-| Biến | Mô tả | Ví dụ |
-|---|---|---|
-| `APP_NAME` | Tên ứng dụng | `Backend sadvn.vn` |
-| `SERVER_PORT` | Port chạy backend | `8386` |
-| `DATABASE_HOST` | Host SQL Server | `localhost` |
-| `DATABASE_PORT` | Port SQL Server | `1433` |
-| `DATABASE_NAME` | Tên database | `sadvn_db` |
-| `DATABASE_USER` | User database | `sa` |
-| `DATABASE_PASSWORD` | Password database | — |
-| `JWT_SECRET` | Secret key cho JWT | — |
-| `JWT_EXPIRATION` | Thời gian hết hạn JWT (ms) | `860000` |
-| `CORS_ALLOWED_ORIGINS` | Danh sách origin được phép | `https://sadvn.vn` |
-
-### Frontend (`sources/frontend/.env`)
-
-| Biến | Mô tả | Ví dụ |
-|---|---|---|
-| `API_URL` | URL backend API | `http://localhost:8386` |
-
----
-
-## Cấu trúc source code
-
-### Frontend (`sources/frontend/src/`)
-
-```
-src/
-├── app/
-│   ├── layout.tsx                    # Root layout (Inter font, Vietnamese)
-│   ├── page.tsx                      # Trang đăng nhập
-│   ├── login/                        # Route đăng nhập
-│   ├── admin/                        # Trang quản trị doanh nghiệp
-│   │   ├── page.tsx                  # Admin dashboard
-│   │   ├── components/               # Components riêng cho admin
-│   │   └── hooks/                    # Custom hooks (useBusinesses)
-│   └── [business_code]/[product_name]/[gold_purity]/[total_weight]/[stone_weight]/[product_code]/
-│       └── page.tsx                  # Trang tra cứu sản phẩm (dynamic route)
-├── assets/                           # CSS chính
-├── components/                       # Components dùng chung (Modal, Toast, CopyProtection)
-└── services/                         # API client & service layers
-    ├── ApiClient.ts                  # HTTP client wrapper
-    ├── authService.ts                # Xử lý đăng nhập/JWT
-    └── businessService.ts            # CRUD doanh nghiệp
-```
-
-### Backend (`sources/backend/src/main/java/com/app/backend/`)
-
-```
-backend/
-├── BackendApplication.java           # Entry point
-├── configs/                          # Cấu hình (CORS, JWT, Security)
-├── core/                             # Thành phần lõi
-│   ├── database/                     # Database utilities
-│   ├── exceptions/                   # Xử lý exception toàn cục
-│   ├── jwt/                          # JWT filter & utilities
-│   └── response/                     # Response wrapper chuẩn hóa
-├── entities/                         # JPA entities (Account, Business)
-└── modules/                          # Business modules
-    ├── auth/                         # Authentication (login)
-    ├── business/                     # CRUD doanh nghiệp
-    └── health/                       # Health check endpoint
-```
-
----
-
-## License
-
-Private — Internal use only.
+## Bản quyền
+Nội bộ doanh nghiệp — All rights reserved.
